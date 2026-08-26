@@ -60,6 +60,24 @@ cp .env.example .env
 файл сессии `barometer.session` — он в `.gitignore` и в репозиторий не
 попадает, как и `.env`.
 
+## Быстрый старт
+
+```bash
+git clone https://github.com/soulaizmerenie-del/Barometer-.git && cd Barometer-
+./setup.sh <api_id> <api_hash>
+```
+
+Скрипт создаёт окружение, ставит зависимости и записывает ключи в `.env`.
+Дальше — вход и ежедневный запуск (см. ниже).
+
+> **Запускать нужно на своей машине.** Из песочницы ассистента это не
+> работает: там наружу пропускается только HTTPS, а MTProto — бинарный
+> протокол поверх TCP. Соединение с дата-центром Telegram устанавливается,
+> но рукопожатие обрывается на середине (`140 bytes read on a total of 288
+> expected`). Проверены транспорты abridged, HTTP и туннель через прокси,
+> порты 443, 80 и 5222 — не проходит ни один. Поэтому сбор выполняете вы, а
+> ассистенту достаётся дайджест.
+
 ## Способ 1: под своей учётной записью
 
 Работает без бота и без прав администратора — видно ровно то, что видите вы.
@@ -81,10 +99,13 @@ python3 -m barometer login status   # проверить сессию и вид�
 3. Собирать и сводить:
 
 ```bash
-python3 -m barometer collect --date yesterday
-python3 -m barometer digest  --date yesterday --print
-python3 -m barometer report  --date yesterday
+python3 -m barometer daily --date yesterday --show   # сбор + дайджест
+python3 -m barometer report --date yesterday         # после заполнения задачника
 ```
+
+`daily` — обычный ежедневный запуск. Отдельные шаги (`collect`, `digest`)
+остаются доступны, если нужно пересобрать дайджест без повторного чтения
+чатов.
 
 Файл `barometer.session` после входа — это полноценный доступ к учётной
 записи, читать переписку с ним можно без повторного кода. Он в `.gitignore`,

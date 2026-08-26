@@ -91,6 +91,16 @@ def cmd_digest(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_daily(args: argparse.Namespace) -> int:
+    """Сбор и дайджест одной командой — обычный ежедневный запуск."""
+    day = _parse_date(args.date)
+    messages = asyncio.run(collect_mod.collect(day, limit_per_chat=args.limit))
+    collect_mod.save(day, messages)
+    print(f"Собрано {digest_mod.plural_messages(len(messages))} за {day:%d.%m.%Y}")
+    args.print = args.show
+    return cmd_digest(args)
+
+
 def cmd_report(args: argparse.Namespace) -> int:
     day = _parse_date(args.date)
     data = Day.load(day)
@@ -171,6 +181,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--timeout", type=int, default=60, help="длительность long polling, сек")
     p.add_argument("--rounds", type=int, default=None, help="число опросов; без флага — бесконечно")
     p.set_defaults(func=cmd_watch)
+
+    p = sub.add_parser("daily", help="сбор и дайджест за сутки одной командой")
+    p.add_argument("--date", default="yesterday")
+    p.add_argument("--limit", type=int, default=500)
+    p.add_argument("--show", action="store_true", help="вывести дайджест в консоль")
+    p.set_defaults(func=cmd_daily)
 
     p = sub.add_parser("digest", help="собрать дайджест из выгрузки")
     p.add_argument("--date", default="today")
