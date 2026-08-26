@@ -11,6 +11,7 @@ from . import bot_watch as bot_mod
 from . import collect as collect_mod
 from . import digest as digest_mod
 from . import import_export as import_mod
+from . import login as login_mod
 from . import matrix as matrix_mod
 from pathlib import Path
 
@@ -49,6 +50,16 @@ def cmd_import(args: argparse.Namespace) -> int:
         return 0
     path = collect_mod.save(day, messages)
     print(f"Импортировано {digest_mod.plural_messages(len(messages))} за {day:%d.%m.%Y} → {path}")
+    return 0
+
+
+def cmd_login(args: argparse.Namespace) -> int:
+    if args.step == "request":
+        print(asyncio.run(login_mod.request(args.phone)))
+    elif args.step == "code":
+        print(asyncio.run(login_mod.sign_in(args.code, args.password)))
+    else:
+        print(asyncio.run(login_mod.status()))
     return 0
 
 
@@ -130,6 +141,18 @@ def build_parser() -> argparse.ArgumentParser:
         description="Мониторинг рабочих чатов ZFOS и отчёты по матрице ответственности.",
     )
     sub = parser.add_subparsers(dest="command", required=True)
+
+    p = sub.add_parser("login", help="вход в Telegram в два шага")
+    steps = p.add_subparsers(dest="step", required=True)
+    step = steps.add_parser("request", help="запросить код подтверждения")
+    step.add_argument("--phone", required=True, help="номер в формате +38267123456")
+    step.set_defaults(func=cmd_login, step="request")
+    step = steps.add_parser("code", help="подтвердить полученный код")
+    step.add_argument("--code", required=True)
+    step.add_argument("--password", default=None, help="пароль двухфакторной защиты")
+    step.set_defaults(func=cmd_login, step="code")
+    step = steps.add_parser("status", help="проверить сессию и видимость чатов")
+    step.set_defaults(func=cmd_login, step="status")
 
     p = sub.add_parser("collect", help="прочитать сообщения трёх чатов за сутки")
     p.add_argument("--date", default="today", help="YYYY-MM-DD | today | yesterday")

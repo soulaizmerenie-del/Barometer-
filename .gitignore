@@ -2,5 +2,6 @@ __pycache__/
 *.py[cod]
 .env
 *.session
+.login_state.json
 *.session-journal
 .venv/
