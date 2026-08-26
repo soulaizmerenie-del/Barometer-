@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -37,8 +38,14 @@ class Chat:
 
 
 def _norm(value: str) -> str:
-    """Убирает эмодзи, пробелы и регистр — по ним группы не опознать."""
-    return "".join(ch for ch in value.lower() if ch.isalnum())
+    """Сводит название к сопоставимому виду.
+
+    Помимо эмодзи, пробелов и регистра снимается юникодное оформление:
+    участники пишут название жирными математическими буквами (𝐙𝐅𝐎𝐒), и без
+    NFKC такое название не совпадёт с обычным ZFOS.
+    """
+    folded = unicodedata.normalize("NFKC", value).lower()
+    return "".join(ch for ch in folded if ch.isalnum())
 
 
 # Три чата со скриншота, обведённые зелёным.
@@ -52,7 +59,7 @@ CHATS: tuple[Chat, ...] = (
     Chat(
         key="clientele",
         title="ZFOS CLIENTELE",
-        aliases=("ZFOS♻️🛎 CLIENTELE", "ZFOS CLIENTELE", "CLIENTELE"),
+        aliases=("ZFOS♻️🛎 CLIENTELE", "ZFOS CLIENTELE", "CLIENTELE", "Клиенты"),
         note="Клиенты, КП, заявки, поставки под конкретные объекты.",
     ),
     Chat(

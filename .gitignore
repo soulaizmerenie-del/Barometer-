@@ -5,3 +5,11 @@ __pycache__/
 .login_state.json
 *.session-journal
 .venv/
+
+# Реальная переписка и задачники: репозиторий публичный, содержимое чатов
+# в него попадать не должно. Пример за 25.08 добавлен принудительно.
+data/digests/*.json
+data/digests/*.md
+data/tasks/*.json
+!data/tasks/2026-08-25.json
+data/cron.log

@@ -39,7 +39,20 @@ def cmd_collect(args: argparse.Namespace) -> int:
 
 def cmd_import(args: argparse.Namespace) -> int:
     day = _parse_date(args.date) if args.date else None
-    messages = import_mod.parse(Path(args.path), day)
+    # Выгрузка делается по чату, поэтому файлов обычно несколько — сливаем.
+    messages = []
+    for path in args.path:
+        chunk = import_mod.parse(Path(path), day)
+        print(f"  {Path(path).name}: {digest_mod.plural_messages(len(chunk))}")
+        messages.extend(chunk)
+    seen = set()
+    unique = []
+    for message in sorted(messages, key=lambda m: (m.at, m.chat_key, m.message_id)):
+        key = (message.chat_key, message.message_id)
+        if key not in seen:
+            seen.add(key)
+            unique.append(message)
+    messages = unique
     if day is None:
         by_day: dict = {}
         for message in messages:
@@ -200,7 +213,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=cmd_collect)
 
     p = sub.add_parser("import", help="импортировать выгрузку Telegram Desktop (result.json)")
-    p.add_argument("path", help="путь к result.json")
+    p.add_argument("path", nargs="+", help="пути к result.json (можно несколько)")
     p.add_argument("--date", default=None, help="взять только эти сутки; без флага — все")
     p.set_defaults(func=cmd_import)
 
