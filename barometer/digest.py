@@ -49,7 +49,7 @@ def build(day: date, messages: list[Message], previous: Day | None = None) -> st
     """
     divisions = matrix.load()
     lines = [f"# Дайджест рабочих чатов за {day:%d.%m.%Y}", ""]
-    lines.append(f"Всего сообщений: {len(messages)}")
+    lines.append(f"Всего: {plural_messages(len(messages))}")
     lines.append("")
 
     if previous and previous.tasks:
@@ -82,7 +82,7 @@ def build(day: date, messages: list[Message], previous: Day | None = None) -> st
     lines.append("")
     for chat in CHATS:
         chat_messages = [m for m in messages if m.chat_key == chat.key]
-        lines.append(f"### {chat.title} ({_plural(len(chat_messages))})")
+        lines.append(f"### {chat.title} ({plural_messages(len(chat_messages))})")
         if chat.note:
             lines.append(f"_{chat.note}_")
         lines.append("")
@@ -128,7 +128,7 @@ def _looks_like_task(text: str) -> bool:
     return bool(_TASK_HINT.search(text))
 
 
-def _plural(count: int) -> str:
+def plural_messages(count: int) -> str:
     """Согласование числительного: 1 сообщение / 2 сообщения / 5 сообщений."""
     tail = count % 100
     if 11 <= tail <= 14:

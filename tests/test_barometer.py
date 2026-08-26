@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from barometer import matrix, people  # noqa: E402
+from barometer import import_export, matrix, people  # noqa: E402
 from barometer.collect import WriteAttempted, _lock_read_only  # noqa: E402
 from barometer.config import CHATS, chat_by_key  # noqa: E402
 from barometer.report import Day, render_report, render_tasks  # noqa: E402
@@ -55,6 +55,39 @@ def test_report_matches_reference_format():
     assert render_tasks(day).startswith("Задачи на 25.08:")
     # Пункт без участников не печатает пустой блок.
     assert "Участник:\n\nИсполнитель" not in report
+
+
+FIXTURE = Path(__file__).resolve().parent / "fixtures" / "export_sample.json"
+
+
+def test_import_export_one_day():
+    messages = import_export.parse(FIXTURE, date(2026, 8, 25))
+    assert len(messages) == 3
+    chats = {m.chat_key for m in messages}
+    assert chats == {"tasks", "clientele", "main"}
+    # Личные заметки в отслеживаемые чаты не входят.
+    assert all("не должно попасть" not in m.text for m in messages)
+
+
+def test_import_export_flattens_formatting():
+    messages = import_export.parse(FIXTURE, date(2026, 8, 25))
+    task = next(m for m in messages if m.chat_key == "tasks")
+    assert task.text == "Нужно найти поставщика для креплений панелей до конца недели"
+    # Служебное сообщение (invite_members) пропущено.
+    assert task.message_id == 102
+
+
+def test_import_export_keeps_media_and_replies():
+    messages = import_export.parse(FIXTURE, date(2026, 8, 25))
+    photo = next(m for m in messages if m.chat_key == "main")
+    assert photo.has_media is True
+    reply = next(m for m in messages if m.chat_key == "clientele")
+    assert reply.reply_to == 329
+
+
+def test_import_export_all_days():
+    messages = import_export.parse(FIXTURE)
+    assert {m.at[:10] for m in messages} == {"2026-08-25", "2026-08-26"}
 
 
 def test_client_cannot_write():
