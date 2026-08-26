@@ -58,6 +58,13 @@ def _to_message(update: dict, chat: Chat) -> Message | None:
     body = update.get("message") or update.get("edited_message") or update.get("channel_post")
     if not body:
         return None
+    # Служебные события (вход в группу, смена названия) текста и вложений не
+    # имеют — в отчёт им попадать незачем.
+    has_media = any(k in body for k in ("photo", "document", "video", "voice", "audio"))
+    text = (body.get("text") or body.get("caption") or "").strip()
+    if not text and not has_media:
+        return None
+
     sender = body.get("from") or {}
     author = " ".join(
         filter(None, (sender.get("first_name"), sender.get("last_name")))
@@ -69,9 +76,9 @@ def _to_message(update: dict, chat: Chat) -> Message | None:
         message_id=int(body.get("message_id", 0)),
         at=when.strftime("%Y-%m-%d %H:%M"),
         author=author,
-        text=(body.get("text") or body.get("caption") or "").strip(),
+        text=text,
         reply_to=(body.get("reply_to_message") or {}).get("message_id"),
-        has_media=any(k in body for k in ("photo", "document", "video", "voice", "audio")),
+        has_media=has_media,
     )
 
 

@@ -157,6 +157,16 @@ def test_bot_message_conversion():
     assert message.text == "Доставка Нехаду выполнена"
 
 
+def test_bot_skips_service_events():
+    joined = {"update_id": 2, "message": {
+        "message_id": 78, "date": 1787000000,
+        "from": {"first_name": "Игорь"},
+        "chat": {"id": -1001, "title": "ZFOS♻️☀️Основной Чат"},
+        "new_chat_members": [{"first_name": "Claude", "username": "cluide_bot"}],
+    }}
+    assert bot_watch._to_message(joined, chat_by_key("main")) is None
+
+
 def test_client_cannot_write():
     class FakeClient:
         def send_message(self, *_a, **_k):
