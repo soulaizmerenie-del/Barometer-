@@ -9,7 +9,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from barometer import import_export, matrix, people  # noqa: E402
-from barometer import bot_watch  # noqa: E402
+from barometer import bot_watch, propose, publish  # noqa: E402
+from barometer.collect import Message  # noqa: E402
 from barometer.collect import WriteAttempted, _lock_read_only  # noqa: E402
 from barometer.config import CHATS, chat_by_key  # noqa: E402
 from barometer.report import Day, render_report, render_tasks  # noqa: E402
@@ -165,6 +166,57 @@ def test_bot_skips_service_events():
         "new_chat_members": [{"first_name": "Claude", "username": "cluide_bot"}],
     }}
     assert bot_watch._to_message(joined, chat_by_key("main")) is None
+
+
+def _msg(chat_key, text, at="2026-08-26 10:00", author="Максим Новоселов", mid=1):
+    return Message(chat_key=chat_key, chat_title="ZFOS Основной Чат", message_id=mid,
+                   at=at, author=author, text=text)
+
+
+def test_propose_drops_finished_and_carries_open_tasks():
+    previous = Day.load(date(2026, 8, 25))
+    draft, _ = propose.build(date(2026, 8, 26), [], previous)
+    titles = [t.title for t in draft.tasks]
+    # Закрытые вчера задачи не переносятся.
+    assert "Оценка инвентаря и поиск крепежей для дальнейших монтажей" not in titles
+    assert "Доставка оборудования Нехаду" not in titles
+    assert "Поиск проектировщика" in titles
+
+
+def test_propose_sets_status_from_messages():
+    previous = Day.load(date(2026, 8, 25))
+    messages = [_msg("main", "Поиск проектировщика завершён, инженера нашли и договорились")]
+    draft, _ = propose.build(date(2026, 8, 26), messages, previous)
+    task = next(t for t in draft.tasks if t.title == "Поиск проектировщика")
+    assert task.status == "done"
+    assert task.evidence and task.evidence[0].author == "Максим Новоселов"
+
+
+def test_propose_flags_blocked_for_review():
+    previous = Day.load(date(2026, 8, 25))
+    messages = [_msg("main", "По поиску проектировщика проблема, нет ответа от подрядчика")]
+    draft, review = propose.build(date(2026, 8, 26), messages, previous)
+    task = next(t for t in draft.tasks if t.title == "Поиск проектировщика")
+    assert task.status == "blocked"
+    assert any("помеха" in line for line in review)
+
+
+def test_propose_reports_unmentioned_tasks():
+    previous = Day.load(date(2026, 8, 25))
+    _, review = propose.build(date(2026, 8, 26), [], previous)
+    assert all("не упоминалась" in line for line in review)
+
+
+def test_publish_refuses_without_explicit_permission():
+    import os
+
+    os.environ.pop("BAROMETER_ALLOW_PUBLISH", None)
+    try:
+        publish.publish(date(2026, 8, 25))
+    except publish.PublishRefused as error:
+        assert "приватный" in str(error)
+        return
+    raise AssertionError("публикация не была заблокирована")
 
 
 def test_client_cannot_write():

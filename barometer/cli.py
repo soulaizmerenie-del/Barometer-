@@ -13,6 +13,8 @@ from . import digest as digest_mod
 from . import import_export as import_mod
 from . import login as login_mod
 from . import matrix as matrix_mod
+from . import propose as propose_mod
+from . import publish as publish_mod
 from pathlib import Path
 
 from .config import CHATS, DIGESTS_DIR, TASKS_DIR
@@ -91,6 +93,11 @@ def cmd_digest(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_publish(args: argparse.Namespace) -> int:
+    print(publish_mod.publish(_parse_date(args.date)))
+    return 0
+
+
 def cmd_daily(args: argparse.Namespace) -> int:
     """Сбор и дайджест одной командой — обычный ежедневный запуск."""
     day = _parse_date(args.date)
@@ -98,7 +105,30 @@ def cmd_daily(args: argparse.Namespace) -> int:
     collect_mod.save(day, messages)
     print(f"Собрано {digest_mod.plural_messages(len(messages))} за {day:%d.%m.%Y}")
     args.print = args.show
-    return cmd_digest(args)
+    cmd_digest(args)
+    cmd_propose(args)
+    if args.publish:
+        print()
+        print(publish_mod.publish(day))
+    return 0
+
+
+def cmd_propose(args: argparse.Namespace) -> int:
+    """Черновик задачника: статусы выведены из переписки, роли — из матрицы."""
+    day = _parse_date(args.date)
+    messages = collect_mod.load(day)
+    draft, review = propose_mod.build(day, messages, propose_mod.previous_day(day))
+    path = draft.save()
+    print(f"Черновик задачника → {path}")
+    print()
+    print(render_report(draft))
+    if review:
+        print("Требует проверки человеком:")
+        for line in review:
+            print(f"  • {line}")
+    else:
+        print("Спорных мест не найдено — но отчёт всё равно стоит просмотреть.")
+    return 0
 
 
 def cmd_report(args: argparse.Namespace) -> int:
@@ -186,12 +216,21 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--date", default="yesterday")
     p.add_argument("--limit", type=int, default=500)
     p.add_argument("--show", action="store_true", help="вывести дайджест в консоль")
+    p.add_argument("--publish", action="store_true", help="отправить результат в репозиторий")
     p.set_defaults(func=cmd_daily)
+
+    p = sub.add_parser("publish", help="отправить дайджест и задачник в репозиторий")
+    p.add_argument("--date", default="yesterday")
+    p.set_defaults(func=cmd_publish)
 
     p = sub.add_parser("digest", help="собрать дайджест из выгрузки")
     p.add_argument("--date", default="today")
     p.add_argument("--print", action="store_true", help="вывести дайджест в консоль")
     p.set_defaults(func=cmd_digest)
+
+    p = sub.add_parser("propose", help="черновик задачника со статусами из переписки")
+    p.add_argument("--date", default="yesterday")
+    p.set_defaults(func=cmd_propose)
 
     p = sub.add_parser("report", help="отчёт по задачам дня")
     p.add_argument("--date", default="today")
