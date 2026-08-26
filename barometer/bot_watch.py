@@ -90,6 +90,66 @@ def _merge(day: date, fresh: list[Message], directory: Path) -> int:
     return len(added)
 
 
+def check(*, chats: tuple[Chat, ...] = CHATS) -> int:
+    """Проверяет настройку бота и говорит, чего не хватает.
+
+    Возвращает число незакрытых пунктов: 0 — можно запускать watch.
+    """
+    token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    if not token:
+        print("✗ TELEGRAM_BOT_TOKEN не задан. Положите токен в .env.")
+        return 1
+
+    problems = 0
+    me = _call(token, "getMe")
+    print(f"✓ Бот доступен: @{me.get('username')} ({me.get('first_name')})")
+
+    if me.get("can_join_groups"):
+        print("✓ Бота можно добавлять в группы")
+    else:
+        print("✗ Добавление в группы запрещено: @BotFather → /setjoingroups → Enable")
+        problems += 1
+
+    # Ключевой пункт: без этого бот видит только команды и ответы себе.
+    if me.get("can_read_all_group_messages"):
+        print("✓ Privacy mode отключён — бот видит все сообщения групп")
+    else:
+        print("✗ Privacy mode включён: @BotFather → /setprivacy → Disable,")
+        print("  затем удалить бота из чатов и добавить заново.")
+        problems += 1
+
+    updates = _call(token, "getUpdates", timeout=1, allowed_updates=ALLOWED_UPDATES)
+    seen: dict[str, str] = {}
+    for update in updates:
+        body = update.get("message") or update.get("edited_message") or update.get("channel_post") or {}
+        chat_blob = body.get("chat") or {}
+        title = chat_blob.get("title")
+        if title:
+            seen[title] = str(chat_blob.get("id"))
+
+    for chat in chats:
+        match = next((t for t in seen if chat.matches(t)), None)
+        if match:
+            print(f"✓ {chat.title}: сообщения приходят (id {seen[match]})")
+        else:
+            print(f"? {chat.title}: сообщений пока не было")
+            problems += 1
+
+    others = [t for t in seen if not any(c.matches(t) for c in chats)]
+    if others:
+        print(f"  Помимо отслеживаемых видны чаты: {', '.join(sorted(others))}")
+
+    if problems:
+        print()
+        print("Пункты со знаком «?» могут закрыться сами: Bot API отдаёт только")
+        print("новые сообщения. Напишите любое сообщение в каждый из трёх чатов")
+        print("и повторите проверку.")
+    else:
+        print()
+        print("Всё готово, можно запускать: python3 -m barometer watch")
+    return problems
+
+
 def watch(
     *,
     chats: tuple[Chat, ...] = CHATS,

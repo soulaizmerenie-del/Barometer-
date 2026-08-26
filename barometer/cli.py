@@ -52,6 +52,10 @@ def cmd_import(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_bot_check(_args: argparse.Namespace) -> int:
+    return 0 if bot_mod.check() == 0 else 1
+
+
 def cmd_watch(args: argparse.Namespace) -> int:
     bot_mod.watch(timeout=args.timeout, rounds=args.rounds)
     return 0
@@ -136,6 +140,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("path", help="путь к result.json")
     p.add_argument("--date", default=None, help="взять только эти сутки; без флага — все")
     p.set_defaults(func=cmd_import)
+
+    p = sub.add_parser("bot-check", help="проверить настройку бота и доступ к трём чатам")
+    p.set_defaults(func=cmd_bot_check)
 
     p = sub.add_parser("watch", help="живой сбор через бота (нужен TELEGRAM_BOT_TOKEN)")
     p.add_argument("--timeout", type=int, default=60, help="длительность long polling, сек")

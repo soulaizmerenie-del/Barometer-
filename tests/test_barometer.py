@@ -9,6 +9,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from barometer import import_export, matrix, people  # noqa: E402
+from barometer import bot_watch  # noqa: E402
 from barometer.collect import WriteAttempted, _lock_read_only  # noqa: E402
 from barometer.config import CHATS, chat_by_key  # noqa: E402
 from barometer.report import Day, render_report, render_tasks  # noqa: E402
@@ -88,6 +89,72 @@ def test_import_export_keeps_media_and_replies():
 def test_import_export_all_days():
     messages = import_export.parse(FIXTURE)
     assert {m.at[:10] for m in messages} == {"2026-08-25", "2026-08-26"}
+
+
+def _stub_bot(monkey: dict):
+    """Подменяет вызовы Bot API заранее заданными ответами."""
+
+    def fake_call(_token, method, **_params):
+        return monkey[method]
+
+    return fake_call
+
+
+def test_bot_check_reports_privacy_mode(capture=None):
+    import os
+
+    original_call = bot_watch._call
+    os.environ["TELEGRAM_BOT_TOKEN"] = "test-token"
+    try:
+        bot_watch._call = _stub_bot({
+            "getMe": {"username": "zfos_bot", "first_name": "ZFOS",
+                      "can_join_groups": True, "can_read_all_group_messages": False},
+            "getUpdates": [],
+        })
+        # Privacy mode включён + ни одного чата не видно = 1 + 3 замечания.
+        assert bot_watch.check() == 4
+    finally:
+        bot_watch._call = original_call
+        os.environ.pop("TELEGRAM_BOT_TOKEN", None)
+
+
+def test_bot_check_passes_when_all_three_chats_seen():
+    import os
+
+    original_call = bot_watch._call
+    os.environ["TELEGRAM_BOT_TOKEN"] = "test-token"
+    updates = [
+        {"update_id": i, "message": {"message_id": i, "date": 0,
+         "chat": {"id": -100 - i, "title": title}}}
+        for i, title in enumerate(
+            ("Задачи ZFOS", "ZFOS♻️🛎 CLIENTELE", "ZFOS♻️☀️Основной Чат")
+        )
+    ]
+    try:
+        bot_watch._call = _stub_bot({
+            "getMe": {"username": "zfos_bot", "first_name": "ZFOS",
+                      "can_join_groups": True, "can_read_all_group_messages": True},
+            "getUpdates": updates,
+        })
+        assert bot_watch.check() == 0
+    finally:
+        bot_watch._call = original_call
+        os.environ.pop("TELEGRAM_BOT_TOKEN", None)
+
+
+def test_bot_message_conversion():
+    update = {"update_id": 1, "message": {
+        "message_id": 77, "date": 1787000000,
+        "from": {"first_name": "Максим", "last_name": "Новоселов"},
+        "chat": {"id": -1001, "title": "ZFOS♻️☀️Основной Чат"},
+        "text": "Доставка Нехаду выполнена",
+        "photo": [{"file_id": "x"}],
+    }}
+    message = bot_watch._to_message(update, chat_by_key("main"))
+    assert message.author == "Максим Новоселов"
+    assert message.chat_key == "main"
+    assert message.has_media is True
+    assert message.text == "Доставка Нехаду выполнена"
 
 
 def test_client_cannot_write():
