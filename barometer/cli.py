@@ -42,7 +42,9 @@ def cmd_import(args: argparse.Namespace) -> int:
     # Выгрузка делается по чату, поэтому файлов обычно несколько — сливаем.
     messages = []
     for path in args.path:
-        chunk = import_mod.parse(Path(path), day)
+        source = Path(path)
+        reader = import_mod.parse_html if source.suffix.lower() in (".html", ".htm") else import_mod.parse
+        chunk = reader(source, day)
         print(f"  {Path(path).name}: {digest_mod.plural_messages(len(chunk))}")
         messages.extend(chunk)
     seen = set()
