@@ -28,7 +28,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from .collect import Message, load, save
-from .config import CHATS, DIGESTS_DIR, TIMEZONE, Chat
+from .config import DIGESTS_DIR, GROUP_CHATS, TIMEZONE, Chat
 from .digest import plural_messages
 
 API = "https://api.telegram.org/bot{token}/{method}"
@@ -97,7 +97,7 @@ def _merge(day: date, fresh: list[Message], directory: Path) -> int:
     return len(added)
 
 
-def check(*, chats: tuple[Chat, ...] = CHATS) -> int:
+def check(*, chats: tuple[Chat, ...] = GROUP_CHATS) -> int:
     """Проверяет настройку бота и говорит, чего не хватает.
 
     Возвращает число незакрытых пунктов: 0 — можно запускать watch.
@@ -159,7 +159,7 @@ def check(*, chats: tuple[Chat, ...] = CHATS) -> int:
 
 def watch(
     *,
-    chats: tuple[Chat, ...] = CHATS,
+    chats: tuple[Chat, ...] = GROUP_CHATS,
     directory: Path = DIGESTS_DIR,
     timeout: int = 60,
     rounds: int | None = None,

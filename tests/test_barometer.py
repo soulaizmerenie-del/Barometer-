@@ -12,7 +12,7 @@ from barometer import import_export, matrix, people  # noqa: E402
 from barometer import bot_watch, propose, publish  # noqa: E402
 from barometer.collect import Message  # noqa: E402
 from barometer.collect import WriteAttempted, _lock_read_only  # noqa: E402
-from barometer.config import CHATS, chat_by_key  # noqa: E402
+from barometer.config import CHATS, GROUP_CHATS, chat_by_key  # noqa: E402
 from barometer.report import Day, render_report, render_tasks  # noqa: E402
 
 
@@ -44,7 +44,11 @@ def test_chat_matching_ignores_emoji_and_case():
     main = chat_by_key("main")
     assert main.matches("ZFOS♻️☀️Основной Чат")
     assert chat_by_key("clientele").matches("ZFOS♻️🛎 CLIENTELE")
-    assert len(CHATS) == 3
+    # Основной чат участники пишут жирными математическими буквами.
+    assert main.matches("𝐙𝐅𝐎𝐒♻️ 🔆Основной Чат")
+    # Личная переписка — источник данных, но не групповой чат.
+    assert len(CHATS) == 4 and len(GROUP_CHATS) == 3
+    assert not chat_by_key("dm_igor").group
 
 
 def test_report_matches_reference_format():

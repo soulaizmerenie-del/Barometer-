@@ -31,6 +31,8 @@ class Chat:
     # Варианты названия в Telegram: эмодзи и регистр у групп плавают.
     aliases: tuple[str, ...] = field(default_factory=tuple)
     note: str = ""
+    # Личный диалог: бот в него попасть не может, для сбора ботом непригоден.
+    group: bool = True
 
     def matches(self, title: str) -> bool:
         norm = _norm(title)
@@ -67,6 +69,7 @@ CHATS: tuple[Chat, ...] = (
         title="Личная переписка с И. Кожемякой",
         aliases=("Игорь Кожемяка",),
         note="Личный диалог: часть решений принимается здесь, а не в группах.",
+        group=False,
     ),
     Chat(
         key="main",
@@ -75,6 +78,9 @@ CHATS: tuple[Chat, ...] = (
         note="Общий рабочий чат: статусы, монтажи, логистика, импорт.",
     ),
 )
+
+
+GROUP_CHATS: tuple[Chat, ...] = tuple(c for c in CHATS if c.group)
 
 
 def chat_by_key(key: str) -> Chat:
