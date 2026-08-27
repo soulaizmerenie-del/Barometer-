@@ -120,6 +120,11 @@ _TEXT = re.compile(r'<div class="text">\s*(.*?)\s*</div>\s*</div>', re.S)
 _REPLY = re.compile(r'GoToMessage\((\d+)\)')
 _MEDIA = re.compile(r'media_(photo|voice_message|video_file|file|call|audio_file)')
 _TAG = re.compile(r'<[^>]+>')
+# Пересланное сообщение несёт своего автора и свою дату — брать нужно их,
+# а не того, кто переслал, и не время пересылки.
+_FWD = re.compile(r'<div class="forwarded body">(.*)', re.S)
+_FWD_FROM = re.compile(r'<div class="from_name">(.*?)</div>', re.S)
+_FWD_STAMP = re.compile(r'<span class="date details" title="([^"]+)"')
 
 
 def _html_text(chunk: str) -> str:
@@ -163,20 +168,38 @@ def parse_html(path: Path, day: date | None = None, *, chats: tuple[Chat, ...] =
         if "service" in classes:
             continue  # разделитель даты
 
-        found_from = _FROM.search(chunk)
-        if found_from:
-            author = html_mod.unescape(_TAG.sub("", found_from.group(1)).strip())
+        forwarded = _FWD.search(chunk)
+        stamp_text = None
 
-        stamp = _STAMP.search(chunk)
-        if not stamp:
-            continue
+        if forwarded:
+            # Автор и время оригинала, если они указаны в блоке пересылки.
+            inner = _FWD_FROM.search(forwarded.group(1))
+            if inner:
+                block = inner.group(1)
+                original = _FWD_STAMP.search(block)
+                if original:
+                    stamp_text = original.group(1)
+                    block = block[: original.start()]
+                name = html_mod.unescape(_TAG.sub("", block).strip())
+                if name:
+                    author = name
+        else:
+            found_from = _FROM.search(chunk)
+            if found_from:
+                author = html_mod.unescape(_TAG.sub("", found_from.group(1)).strip())
+
+        if stamp_text is None:
+            stamp = _STAMP.search(chunk)
+            if not stamp:
+                continue
+            stamp_text = stamp.group(1)
         # Формат: "26.08.2026 10:14:34 UTC+01:00"
-        when = datetime.strptime(stamp.group(1)[:19], "%d.%m.%Y %H:%M:%S").replace(tzinfo=tz)
+        when = datetime.strptime(stamp_text[:19], "%d.%m.%Y %H:%M:%S").replace(tzinfo=tz)
         if day is not None and when.date() != day:
             continue
 
         media = _MEDIA.search(chunk)
-        text = _html_text(chunk)
+        text = _html_text(forwarded.group(1) if forwarded else chunk)
         if media and not text:
             # Содержимого нет, но факт важен: звонок, голосовое, фото.
             kind = {

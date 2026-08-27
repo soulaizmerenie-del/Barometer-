@@ -72,6 +72,13 @@ CHATS: tuple[Chat, ...] = (
         group=False,
     ),
     Chat(
+        key="relay",
+        title="клауд работа",
+        aliases=("клауд работа",),
+        note="Пересылки из рабочих чатов. Исходный чат при пересылке теряется.",
+        group=False,
+    ),
+    Chat(
         key="main",
         title="ZFOS Основной Чат",
         aliases=("ZFOS♻️☀️Основной Чат", "ZFOS Основной Чат", "Основной Чат"),

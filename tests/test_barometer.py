@@ -47,8 +47,11 @@ def test_chat_matching_ignores_emoji_and_case():
     # Основной чат участники пишут жирными математическими буквами.
     assert main.matches("𝐙𝐅𝐎𝐒♻️ 🔆Основной Чат")
     # Личная переписка — источник данных, но не групповой чат.
-    assert len(CHATS) == 4 and len(GROUP_CHATS) == 3
-    assert not chat_by_key("dm_igor").group
+    # Источников больше, но групповых — по-прежнему три: личная переписка и
+    # чат пересылок групповыми не являются.
+    assert len(GROUP_CHATS) == 3
+    assert not chat_by_key("dm_igor").group and not chat_by_key("relay").group
+    assert chat_by_key("relay").matches("клауд работа")
 
 
 def test_report_matches_reference_format():
