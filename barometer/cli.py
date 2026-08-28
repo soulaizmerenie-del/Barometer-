@@ -47,13 +47,21 @@ def cmd_import(args: argparse.Namespace) -> int:
         chunk = reader(source, day)
         print(f"  {Path(path).name}: {digest_mod.plural_messages(len(chunk))}")
         messages.extend(chunk)
-    seen = set()
+    # Один и тот же разговор приходит и прямым экспортом, и пересылками в
+    # рабочий чат. Прямой экспорт точнее: у него есть исходный чат и время.
+    seen_ids: set = set()
+    seen_text: set = set()
     unique = []
-    for message in sorted(messages, key=lambda m: (m.at, m.chat_key, m.message_id)):
-        key = (message.chat_key, message.message_id)
-        if key not in seen:
-            seen.add(key)
-            unique.append(message)
+    for message in sorted(
+        messages, key=lambda m: (m.at, 1 if m.chat_key == "relay" else 0, m.message_id)
+    ):
+        ident = (message.chat_key, message.message_id)
+        content = (message.author, message.at, message.text[:80])
+        if ident in seen_ids or (message.chat_key == "relay" and content in seen_text):
+            continue
+        seen_ids.add(ident)
+        seen_text.add(content)
+        unique.append(message)
     messages = unique
     if day is None:
         by_day: dict = {}

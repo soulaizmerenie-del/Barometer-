@@ -116,7 +116,7 @@ def parse(path: Path, day: date | None = None, *, chats: tuple[Chat, ...] = CHAT
 _MESSAGE = re.compile(r'<div class="message ([^"]*)" id="message(-?\d+)">')
 _STAMP = re.compile(r'<div class="pull_right date details" title="([^"]+)"')
 _FROM = re.compile(r'<div class="from_name">\s*(.*?)\s*</div>', re.S)
-_TEXT = re.compile(r'<div class="text">\s*(.*?)\s*</div>\s*</div>', re.S)
+_TEXT = re.compile(r'<div class="text">\s*(.*?)\s*</div>', re.S)
 _REPLY = re.compile(r'GoToMessage\((\d+)\)')
 _MEDIA = re.compile(r'media_(photo|voice_message|video_file|file|call|audio_file)')
 _TAG = re.compile(r'<[^>]+>')
