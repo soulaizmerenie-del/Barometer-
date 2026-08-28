@@ -46,6 +46,8 @@ class Task:
     status: str = "in_progress"
     status_note: str = ""
     report_title: str = ""
+    # Критерий выполнения: без него «сделано» понимают по-разному.
+    result: str = ""
     function: str = ""
     division: str = ""
     evidence: list[Evidence] = field(default_factory=list)
@@ -97,6 +99,7 @@ def _task_to_dict(task: Task) -> dict:
     return {
         "title": task.title,
         "report_title": task.report_title,
+        "result": task.result,
         "status": task.status,
         "status_note": task.status_note,
         "responsible": task.responsible,
@@ -123,6 +126,9 @@ def render_tasks(day: Day) -> str:
         lines += _people_block("Ответственный", "Ответственные", task.responsible)
         lines += _people_block("Участник", "Участники", task.participants)
         lines += _people_block("Исполнитель", "Исполнители", task.executors)
+        if task.result:
+            lines.append("Результат:")
+            lines.append(task.result)
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
 
