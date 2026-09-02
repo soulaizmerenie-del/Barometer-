@@ -133,10 +133,16 @@ def render_tasks(day: Day) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
-def render_report(day: Day) -> str:
-    """Формат 'Отчет на DD.MM' — тот же список плюс статус в заголовке пункта."""
+def render_report(day: Day, *, include_no_data: bool = False) -> str:
+    """Формат 'Отчет на DD.MM' — тот же список плюс статус в заголовке пункта.
+
+    Задачи без данных в выгрузке по умолчанию не печатаются: в отчёте для
+    команды они лишь занимают место. Учёт их не теряет — они остаются в файле
+    дня и попадают в приложение с основаниями.
+    """
+    shown = [t for t in day.tasks if include_no_data or t.status != "no_data"]
     lines = [f"Отчет на {day.date:%d.%m}:", ""]
-    for index, task in enumerate(day.tasks, start=1):
+    for index, task in enumerate(shown, start=1):
         title = task.report_title or task.title
         lines.append(f"{index}. {title} - {task.status_label()}")
         lines += _people_block("Ответственный", "Ответственные", task.responsible)

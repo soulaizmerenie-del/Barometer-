@@ -157,7 +157,7 @@ def cmd_propose(args: argparse.Namespace) -> int:
 def cmd_report(args: argparse.Namespace) -> int:
     day = _parse_date(args.date)
     data = Day.load(day)
-    print(render_report(data))
+    print(render_report(data, include_no_data=args.all))
     if args.evidence:
         print()
         print(render_evidence(data))
@@ -258,6 +258,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("report", help="отчёт по задачам дня")
     p.add_argument("--date", default="today")
     p.add_argument("--evidence", action="store_true", help="приложить основания статусов")
+    p.add_argument("--all", action="store_true", help="показать и задачи без данных в выгрузке")
     p.set_defaults(func=cmd_report)
 
     p = sub.add_parser("tasks", help="список задач дня")
